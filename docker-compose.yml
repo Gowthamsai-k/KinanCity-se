@@ -1,0 +1,22 @@
+services:
+  dashboard:
+    image: nginx:alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./dashboard:/usr/share/nginx/html:ro
+
+  mail:
+    build:
+      context: .
+      dockerfile: Dockerfile.mail
+    environment:
+      MAIL_MODE: ${MAIL_MODE:-log}
+      MAIL_PORT: ${MAIL_PORT:-2525}
+      MAIL_HOSTNAME: ${MAIL_HOSTNAME:-}
+      MAIL_ALLOWED_DOMAINS: ${MAIL_ALLOWED_DOMAINS:-}
+      MAIL_DATA_DIR: /data
+    ports:
+      - "${MAIL_PORT:-2525}:${MAIL_PORT:-2525}"
+    volumes:
+      - ./runtime:/data

@@ -110,6 +110,32 @@ docker run --rm -p 2525:2525 kinancity-mail
 
 Set `MAIL_MODE=direct` to follow activation links, or leave it as `log` to record links without activating them. You can also set `MAIL_HOSTNAME`, `MAIL_ALLOWED_DOMAINS`, and `MAIL_PORT` with `-e` options. The mail image is separate from the core image and is optional if activation links are handled manually.
 
+To start the dashboard and mail service together:
+
+```bash
+docker compose up --build
+```
+
+Open `http://127.0.0.1:8080`. Use **Download batch CSV** to create the input file for the core container. Store shared files under `runtime/` and run the core job with an explicit output path:
+
+```bash
+docker run --rm -v "$PWD:/data" \
+  -e CAPTCHA_PROVIDER=2captcha -e KC_CAPTCHA_VALUE="$TWOCAPTCHA_KEY" \
+  kinancity-core -a /data/kinancity-batch.csv -o /data/runtime/result.csv
+```
+
+After the core job finishes, select `runtime/result.csv` in **Import core results**; the dashboard can download only rows marked `OK`. Select `runtime/links.log` in **Import mail status** to see mail activation events. The dashboard only reports created accounts after reading an `OK` row from KinanCity’s result file, and it only reports activation after reading an `OK` or `DONE` mail event. Receiving those events still requires your domain’s MX record and reachable SMTP port.
+
+For a guided local orchestration, use the confirmation-gated script:
+
+```bash
+chmod +x scripts/run-batch.sh
+CAPTCHA_PROVIDER=2captcha KC_CAPTCHA_VALUE="$TWOCAPTCHA_KEY" \
+  scripts/run-batch.sh --email '@example.invalid' --pattern 'demo***' --count 5 --start 0
+```
+
+It writes `runtime/kinancity-batch.csv`, starts the dashboard and mail containers, then pauses until you type `RUN`. After the core job, import `runtime/result.csv` and `runtime/links.log` in the dashboard. Leaving the confirmation unanswered or typing anything else cancels the core run while leaving the local services running.
+
 **KinanCity** modules are java applications and all you need is a Java 8 Runtime Environment on your system.
 
 ### References

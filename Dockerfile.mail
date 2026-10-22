@@ -13,7 +13,9 @@ RUN chmod 0755 ./docker-entrypoint-mail.sh
 ENV MAIL_MODE=log \
     MAIL_PORT=2525 \
     MAIL_HOSTNAME= \
-    MAIL_ALLOWED_DOMAINS=
+    MAIL_ALLOWED_DOMAINS= \
+    MAIL_DATA_DIR=/data
 
+VOLUME ["/data"]
 EXPOSE 2525
 ENTRYPOINT ["/opt/kinancity-mail/docker-entrypoint-mail.sh"]

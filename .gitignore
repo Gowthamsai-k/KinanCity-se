@@ -19,6 +19,7 @@
 /bin/
 
 *.log
+runtime/
 
 KinanCity-captcha-ImageTypers/config\.properties
 

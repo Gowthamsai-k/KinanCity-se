@@ -45,7 +45,7 @@
       <div class="row"><div><label for="email">Base email</label><input id="email" value="@example.invalid" placeholder="@example.com"></div><div><label for="password">Password</label><input id="password" value="Passw0rd!" type="text"></div></div>
       <div class="row"><div><label for="pattern">Username pattern</label><input id="pattern" value="demo***" placeholder="demo***"></div><div><label for="count">Count</label><input id="count" value="5" type="number" min="1" max="10000"></div></div>
       <div class="row"><div><label for="start">Start number</label><input id="start" value="0" type="number" min="0"></div><div><label for="threads">Threads (command only)</label><input id="threads" value="3" type="number" min="1"></div></div>
-      <div class="actions"><button class="primary" id="preview">Preview batch</button><button id="copyCommand">Copy command</button></div>
+      <div class="actions"><button class="primary" id="preview">Preview batch</button><button id="downloadBatch">Download batch CSV</button><button id="copyCommand">Copy command</button></div>
       <div id="sequenceStatus" class="status" aria-live="polite">Enter a pattern containing one or more asterisks.</div>
     </article>
     <article class="card">
@@ -75,6 +75,19 @@
       <pre id="command">java -jar KinanCity-core/target/kinancity-core-2.1.19-SNAPSHOT.jar -m '@example.invalid' -f 'demo***' -p 'Passw0rd!' -c 5 -s 0 -t 3</pre>
       <p class="small">Run from the repository root after configuring <code>config.properties</code>. Keep provider keys out of this page and out of shell history.</p>
     </article>
+    <article class="card full">
+      <div class="card-head"><h2>Import core results</h2><span class="small">result.csv from the core container</span></div>
+      <input id="resultFile" type="file" accept=".csv,text/csv">
+      <div id="resultStatus" class="status" aria-live="polite">Select a result.csv file after a core run.</div>
+      <div class="actions"><button id="downloadResults" class="hidden">Download successful accounts</button></div>
+      <div style="overflow:auto"><table><thead><tr><th>Username</th><th>Email</th><th>Password</th><th>Status</th><th>Code</th></tr></thead><tbody id="resultRows"><tr><td colspan="5" class="small">No result file loaded.</td></tr></tbody></table></div>
+    </article>
+    <article class="card full">
+      <div class="card-head"><h2>Import mail status</h2><span class="small">links.log from the mail container</span></div>
+      <input id="mailFile" type="file" accept=".log,text/plain">
+      <div id="mailStatus" class="status" aria-live="polite">Select links.log to see activation status by email.</div>
+      <div style="overflow:auto"><table><thead><tr><th>Email</th><th>Type</th><th>Status</th></tr></thead><tbody id="mailRows"><tr><td colspan="3" class="small">No mail status loaded.</td></tr></tbody></table></div>
+    </article>
   </section>
 </main>
 <script>
@@ -93,6 +106,7 @@
     $('previewLabel').textContent=count>100 ? 'Showing first 100 of '+count : count+' record'+(count===1?'':'s'); $('metricValid').textContent=count; $('metricDupes').textContent='0'; $('metricStatus').textContent='Ready'; status.className='status ok'; status.textContent='Sequence is valid and ready for review.';
     const cmd='java -jar KinanCity-core/target/kinancity-core-2.1.19-SNAPSHOT.jar -m '+shell(email)+' -f '+shell(pattern)+' -p '+shell(password)+' -c '+count+' -s '+start+' -t '+threads; $('command').textContent=cmd;
   }
+  let resultCsv = '';
   function validateCsv() {
     const lines=$('csv').value.split(/\r?\n/).filter(line=>line.trim()), status=$('csvStatus'); if(!lines.length){status.className='status bad';status.textContent='Paste a header and at least one record.';return;}
     const headers=lines[0].replace(/^#/,'').split(';').map(x=>x.trim()), required=['username','password','email'], missing=required.filter(x=>!headers.includes(x)); const seen=new Set(), rows=[];
@@ -101,6 +115,12 @@
     if(missing.length){status.className='status bad';status.textContent='Missing required columns: '+missing.join(', ')+'.';}else{const bad=rows.filter(r=>r.checks.length).length;status.className=bad?'status bad':'status ok';status.textContent=bad?bad+' row(s) need attention.':'All rows passed the local checks.';}
     $('command').textContent='java -jar KinanCity-core/target/kinancity-core-2.1.19-SNAPSHOT.jar -a path/to/accounts.csv';
   }
+  function rowsFromSequence() { sequence(); const pattern=$('pattern').value, count=Number($('count').value), start=Number($('start').value), email=$('email').value.trim(), password=$('password').value; const m=pattern.match(/^[^*]*([*]+)[^*]*$/); if(!m||!Number.isInteger(start)||start<0||count<1||start+count-1>Math.pow(10,m[1].length)-1)return []; return Array.from({length:count},(_,i)=>{const u=pattern.replace(/\*+/,String(start+i).padStart(m[1].length,'0'));const e=email.includes('@')?email.replace(/^([^@]*)@/,'$1+'+u+'@'):u+email;return [u,password,e];}); }
+  function download(name, content) { const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([content],{type:'text/csv'}));a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(a.href),500); }
+  $('downloadBatch').onclick=()=>{const rows=rowsFromSequence();if(rows.length)download('kinancity-batch.csv',['#username;password;email',...rows.map(r=>r.join(';'))].join('\n')+'\n');};
+  $('resultFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;const text=await file.text();resultCsv=text;const rows=text.split(/\r?\n/).filter(x=>x&&!x.startsWith('#')).map(x=>x.split(';'));$('resultRows').innerHTML=rows.map(r=>`<tr><td>${esc(r[0]||'')}</td><td>${esc(r[2]||'')}</td><td>${esc(r[1]||'')}</td><td>${esc(r[3]||'')}</td><td>${esc(r[4]||'')}</td></tr>`).join('')||'<tr><td colspan="5">No result rows</td></tr>';const ok=rows.filter(r=>r[3]==='OK');$('resultStatus').className='status '+(ok.length?'ok':'bad');$('resultStatus').textContent=rows.length+' result row(s), '+ok.length+' successful.';$('downloadResults').classList.toggle('hidden',!ok.length);if(ok.length)$('downloadResults').dataset.csv='#username;password;email\n'+ok.map(r=>r.slice(0,3).join(';')).join('\n')+'\n';};
+  $('downloadResults').onclick=()=>download('kinancity-successful-accounts.csv',$('downloadResults').dataset.csv||'');
+  $('mailFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;const lines=(await file.text()).split(/\r?\n/).filter(x=>x&&x.includes(';'));const rows=lines.map(x=>x.split(';')).filter(r=>r.length>=4);$('mailRows').innerHTML=rows.map(r=>`<tr><td>${esc(r[2]||'')}</td><td>${esc(r[0]||'')}</td><td>${esc(r[3]||'')}</td></tr>`).join('')||'<tr><td colspan="3">No mail status rows</td></tr>';const done=rows.filter(r=>['OK','DONE'].includes((r[3]||'').toUpperCase())).length;$('mailStatus').className='status '+(done?'ok':'');$('mailStatus').textContent=rows.length+' mail event(s), '+done+' completed activation event(s).';};
   $('preview').onclick=sequence; $('validateCsv').onclick=validateCsv; $('clearCsv').onclick=()=>{$('csv').value='';$('csvRows').innerHTML='<tr><td colspan="4" class="small">Validation results will appear here.</td></tr>';}; $('copyCommand').onclick=async()=>{await navigator.clipboard.writeText($('command').textContent);$('metricStatus').textContent='Copied';}; sequence();
 </script>
 </body>

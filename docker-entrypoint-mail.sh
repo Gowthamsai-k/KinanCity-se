@@ -12,4 +12,6 @@ if [ -n "${MAIL_ALLOWED_DOMAINS}" ]; then
   printf 'allowedDomains=%s\n' "${MAIL_ALLOWED_DOMAINS}" >> /opt/kinancity-mail/config.properties
 fi
 
+mkdir -p "${MAIL_DATA_DIR}"
+cd "${MAIL_DATA_DIR}"
 exec java -jar /opt/kinancity-mail/kinancity-mail.jar "${MAIL_MODE}" "$@"
