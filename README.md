@@ -60,15 +60,15 @@ You can **compile** it yourself using a **maven** goal : `mvn package`
 
 ## Local batch dashboard
 
-The repository includes a small browser-only dashboard at [`dashboard/index.html`](dashboard/index.html). It previews sequence batches, checks CSV headers, missing required fields, duplicate usernames, and basic date formatting, then produces the corresponding KinanCity command. It does not submit registrations, call CAPTCHA providers, or rotate proxies.
+The repository includes a small dashboard at [`dashboard/index.html`](dashboard/index.html). The normal view asks for a username pattern and account count. The orchestrator uses the local `.env` settings, runs the configured core image after an explicit browser confirmation, and exposes a CSV download only for successful rows that also have an activation event. It does not solve CAPTCHAs or rotate proxies.
 
-Open it directly, or serve the repository with a local static server:
+For preview-only local use, serve the dashboard with:
 
 ```bash
 python3 -m http.server 8080 --directory dashboard
 ```
 
-Then visit `http://127.0.0.1:8080`. Review the generated command, configure `config.properties` separately, and run the command manually from the repository root. Keep API keys and passwords out of the dashboard and shell history.
+Then visit `http://127.0.0.1:8080`. This preview mode performs no network requests.
 
 ## Docker
 
@@ -116,17 +116,19 @@ To start the dashboard and mail service together:
 docker compose up --build
 ```
 
-Open `http://127.0.0.1:8080`. Use **Download batch CSV** to create the input file for the core container. Store shared files under `runtime/` and run the core job with an explicit output path:
+Open `http://127.0.0.1:8080`. The dashboard uses the orchestrator on port `8090`; completed output is downloaded from the page. Runtime files are stored in `runtime/`. A row is exported only when the core result is `OK` and the mail log contains an `OK` or `DONE` activation event.
+
+The **Run through local orchestrator** panel can now start the core container from the dashboard. It sends the batch and provider settings to a localhost-only service on port `8090`, requires a browser confirmation, and writes outputs under `runtime/`. This service mounts `/var/run/docker.sock`; run it only on a machine you control because Docker socket access is equivalent to host Docker control.
+
+To make the dashboard ask only for pattern and count, copy the environment template once:
 
 ```bash
-docker run --rm -v "$PWD:/data" \
-  -e CAPTCHA_PROVIDER=2captcha -e KC_CAPTCHA_VALUE="$TWOCAPTCHA_KEY" \
-  kinancity-core -a /data/kinancity-batch.csv -o /data/runtime/result.csv
+cp .env.example .env
 ```
 
-After the core job finishes, select `runtime/result.csv` in **Import core results**; the dashboard can download only rows marked `OK`. Select `runtime/links.log` in **Import mail status** to see mail activation events. The dashboard only reports created accounts after reading an `OK` row from KinanCity’s result file, and it only reports activation after reading an `OK` or `DONE` mail event. Receiving those events still requires your domain’s MX record and reachable SMTP port.
+Set `CAPTCHA_PROVIDER`, `KC_CAPTCHA_VALUE`, `KINAN_BASE_EMAIL`, and `KINAN_ACCOUNT_PASSWORD` in `.env`. Compose loads these values for the local orchestrator; the browser never receives them. The explicit browser confirmation remains required before a core job starts.
 
-For a guided local orchestration, use the confirmation-gated script:
+For a guided command-line orchestration, use the confirmation-gated script:
 
 ```bash
 chmod +x scripts/run-batch.sh
@@ -134,7 +136,7 @@ CAPTCHA_PROVIDER=2captcha KC_CAPTCHA_VALUE="$TWOCAPTCHA_KEY" \
   scripts/run-batch.sh --email '@example.invalid' --pattern 'demo***' --count 5 --start 0
 ```
 
-It writes `runtime/kinancity-batch.csv`, starts the dashboard and mail containers, then pauses until you type `RUN`. After the core job, import `runtime/result.csv` and `runtime/links.log` in the dashboard. Leaving the confirmation unanswered or typing anything else cancels the core run while leaving the local services running.
+It writes `runtime/kinancity-batch.csv`, starts the services, then pauses until you type `RUN`. Leaving the confirmation unanswered or typing anything else cancels the core run while leaving the local services running.
 
 **KinanCity** modules are java applications and all you need is a Java 8 Runtime Environment on your system.
 

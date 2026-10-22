@@ -1,10 +1,43 @@
 services:
+  core-image:
+    image: kinancity-core:local
+    build:
+      context: .
+      dockerfile: Dockerfile
+    entrypoint: ["/bin/sh", "-c"]
+    command: ["exit 0"]
+
+  orchestrator:
+    image: kinancity-orchestrator:local
+    build:
+      context: .
+      dockerfile: Dockerfile.orchestrator
+    depends_on:
+      - core-image
+    ports:
+      - "8090:8090"
+    environment:
+      CAPTCHA_PROVIDER: ${CAPTCHA_PROVIDER:-local}
+      KC_CAPTCHA_VALUE: ${KC_CAPTCHA_VALUE:-DUMMY_LOCAL_KEY}
+      KINAN_BASE_EMAIL: ${KINAN_BASE_EMAIL:-}
+      KINAN_ACCOUNT_PASSWORD: ${KINAN_ACCOUNT_PASSWORD:-}
+      RUNTIME_DIR: /runtime
+      DRY_RUN: ${DRY_RUN:-false}
+    volumes:
+      - ./runtime:/runtime
+      - /var/run/docker.sock:/var/run/docker.sock
+
   dashboard:
     image: nginx:alpine
+    depends_on:
+      - orchestrator
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     ports:
       - "8080:80"
     volumes:
       - ./dashboard:/usr/share/nginx/html:ro
+      - ./dashboard/nginx.conf:/etc/nginx/conf.d/default.conf:ro
 
   mail:
     build:

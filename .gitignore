@@ -20,6 +20,7 @@
 
 *.log
 runtime/
+.env
 
 KinanCity-captcha-ImageTypers/config\.properties
 

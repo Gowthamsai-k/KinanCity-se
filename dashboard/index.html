@@ -29,26 +29,27 @@
     table { width:100%; border-collapse:collapse; font-size:13px; } th,td { text-align:left; padding:9px 8px; border-bottom:1px solid var(--line); } th { color:var(--muted); font-weight:600; }
     code, pre { font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; } pre { white-space:pre-wrap; background:#f4f6f7; border:1px solid var(--line); border-radius:6px; padding:12px; overflow:auto; }
     .small { font-size:12px; color:var(--muted); } .hidden { display:none; }
+    .advanced { display:none; }
     @media (max-width:760px) { header { display:block; } .grid { grid-template-columns:1fr; } .full { grid-column:auto; } }
   </style>
 </head>
 <body>
 <main>
   <header>
-    <div><div class="eyebrow">KinanCity / local dashboard</div><h1>Batch preparation</h1><p>Preview account batches, validate CSV data, and copy a CLI command.</p></div>
+    <div><div class="eyebrow">KinanCity / local dashboard</div><h1>Batch preparation</h1><p>Enter a username pattern and count, then download the completed output.</p></div>
     <div class="small">Local only · no network requests</div>
   </header>
   <div class="notice">This dashboard prepares input for KinanCity. It does not create accounts, solve CAPTCHAs, call providers, or rotate proxies.</div>
   <section class="grid">
     <article class="card">
       <div class="card-head"><h2>Sequence batch</h2><span class="small">source behavior</span></div>
-      <div class="row"><div><label for="email">Base email</label><input id="email" value="@example.invalid" placeholder="@example.com"></div><div><label for="password">Password</label><input id="password" value="Passw0rd!" type="text"></div></div>
+      <div class="row advanced"><div><label for="email">Base email</label><input id="email" value="@example.invalid" placeholder="@example.com"></div><div><label for="password">Password</label><input id="password" value="Passw0rd!" type="text"></div></div>
       <div class="row"><div><label for="pattern">Username pattern</label><input id="pattern" value="demo***" placeholder="demo***"></div><div><label for="count">Count</label><input id="count" value="5" type="number" min="1" max="10000"></div></div>
-      <div class="row"><div><label for="start">Start number</label><input id="start" value="0" type="number" min="0"></div><div><label for="threads">Threads (command only)</label><input id="threads" value="3" type="number" min="1"></div></div>
-      <div class="actions"><button class="primary" id="preview">Preview batch</button><button id="downloadBatch">Download batch CSV</button><button id="copyCommand">Copy command</button></div>
+      <div class="row advanced"><div><label for="start">Start number</label><input id="start" value="0" type="number" min="0"></div><div><label for="threads">Threads (command only)</label><input id="threads" value="3" type="number" min="1"></div></div>
+      <div class="actions advanced"><button class="primary" id="preview">Preview batch</button><button id="downloadBatch">Download batch CSV</button><button id="copyCommand">Copy command</button></div>
       <div id="sequenceStatus" class="status" aria-live="polite">Enter a pattern containing one or more asterisks.</div>
     </article>
-    <article class="card">
+    <article class="card advanced">
       <div class="card-head"><h2>Batch summary</h2><span class="small">generated locally</span></div>
       <div class="metric"><span>Requested records</span><strong id="metricCount">0</strong></div>
       <div class="metric"><span>Valid records</span><strong id="metricValid">0</strong></div>
@@ -56,33 +57,40 @@
       <div class="metric"><span>Command status</span><strong id="metricStatus">Draft</strong></div>
       <p class="small">The generated command uses <code>-a</code> only for CSV batches and <code>-m/-f/-p/-c/-s</code> for sequence batches.</p>
     </article>
-    <article class="card full">
+    <article class="card full advanced">
       <div class="card-head"><h2>Sequence preview</h2><span class="small" id="previewLabel">No preview yet</span></div>
       <div style="overflow:auto"><table><thead><tr><th>#</th><th>Username</th><th>Email</th><th>Password</th></tr></thead><tbody id="previewRows"><tr><td colspan="4" class="small">Preview records will appear here.</td></tr></tbody></table></div>
     </article>
-    <article class="card">
+    <article class="card advanced">
       <div class="card-head"><h2>CSV validator</h2><span class="small">semicolon separated</span></div>
       <label for="csv">Paste CSV</label><textarea id="csv" placeholder="#username;password;email;dob;country&#10;dummy001;Passw0rd!;dummy001@example.invalid;1990-01-01;GB"></textarea>
       <div class="actions"><button class="primary" id="validateCsv">Validate CSV</button><button id="clearCsv">Clear</button></div>
       <div id="csvStatus" class="status" aria-live="polite">Required columns: username, password, email.</div>
     </article>
-    <article class="card">
+    <article class="card advanced">
       <div class="card-head"><h2>CSV results</h2><span class="small" id="csvLabel">No CSV loaded</span></div>
       <div style="overflow:auto"><table><thead><tr><th>Row</th><th>Username</th><th>Email</th><th>Checks</th></tr></thead><tbody id="csvRows"><tr><td colspan="4" class="small">Validation results will appear here.</td></tr></tbody></table></div>
     </article>
-    <article class="card full">
+    <article class="card full advanced">
       <div class="card-head"><h2>Command to run</h2><span class="small">review before execution</span></div>
       <pre id="command">java -jar KinanCity-core/target/kinancity-core-2.1.19-SNAPSHOT.jar -m '@example.invalid' -f 'demo***' -p 'Passw0rd!' -c 5 -s 0 -t 3</pre>
       <p class="small">Run from the repository root after configuring <code>config.properties</code>. Keep provider keys out of this page and out of shell history.</p>
     </article>
     <article class="card full">
+      <div class="card-head"><h2>Run through local orchestrator</h2><span class="small">requires explicit RUN confirmation</span></div>
+      <p class="small">Provider, email base, account password, and mail settings come from the local `.env` file. Only the batch pattern and count are sent from this page.</p>
+      <div class="actions"><button class="primary" id="runBatch">Start authorized batch</button></div>
+      <div id="runStatus" class="status">Orchestrator: checking…</div>
+      <div class="actions"><button id="downloadOutput" class="hidden">Download completed accounts</button></div>
+    </article>
+    <article class="card full advanced">
       <div class="card-head"><h2>Import core results</h2><span class="small">result.csv from the core container</span></div>
       <input id="resultFile" type="file" accept=".csv,text/csv">
       <div id="resultStatus" class="status" aria-live="polite">Select a result.csv file after a core run.</div>
       <div class="actions"><button id="downloadResults" class="hidden">Download successful accounts</button></div>
       <div style="overflow:auto"><table><thead><tr><th>Username</th><th>Email</th><th>Password</th><th>Status</th><th>Code</th></tr></thead><tbody id="resultRows"><tr><td colspan="5" class="small">No result file loaded.</td></tr></tbody></table></div>
     </article>
-    <article class="card full">
+    <article class="card full advanced">
       <div class="card-head"><h2>Import mail status</h2><span class="small">links.log from the mail container</span></div>
       <input id="mailFile" type="file" accept=".log,text/plain">
       <div id="mailStatus" class="status" aria-live="polite">Select links.log to see activation status by email.</div>
@@ -92,6 +100,7 @@
 </main>
 <script>
   const $ = id => document.getElementById(id);
+  const API_BASE = '/api';
   const esc = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
   const shell = value => "'" + String(value).replace(/'/g, "'\\''") + "'";
   function sequence() {
@@ -121,6 +130,11 @@
   $('resultFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;const text=await file.text();resultCsv=text;const rows=text.split(/\r?\n/).filter(x=>x&&!x.startsWith('#')).map(x=>x.split(';'));$('resultRows').innerHTML=rows.map(r=>`<tr><td>${esc(r[0]||'')}</td><td>${esc(r[2]||'')}</td><td>${esc(r[1]||'')}</td><td>${esc(r[3]||'')}</td><td>${esc(r[4]||'')}</td></tr>`).join('')||'<tr><td colspan="5">No result rows</td></tr>';const ok=rows.filter(r=>r[3]==='OK');$('resultStatus').className='status '+(ok.length?'ok':'bad');$('resultStatus').textContent=rows.length+' result row(s), '+ok.length+' successful.';$('downloadResults').classList.toggle('hidden',!ok.length);if(ok.length)$('downloadResults').dataset.csv='#username;password;email\n'+ok.map(r=>r.slice(0,3).join(';')).join('\n')+'\n';};
   $('downloadResults').onclick=()=>download('kinancity-successful-accounts.csv',$('downloadResults').dataset.csv||'');
   $('mailFile').onchange=async e=>{const file=e.target.files[0];if(!file)return;const lines=(await file.text()).split(/\r?\n/).filter(x=>x&&x.includes(';'));const rows=lines.map(x=>x.split(';')).filter(r=>r.length>=4);$('mailRows').innerHTML=rows.map(r=>`<tr><td>${esc(r[2]||'')}</td><td>${esc(r[0]||'')}</td><td>${esc(r[3]||'')}</td></tr>`).join('')||'<tr><td colspan="3">No mail status rows</td></tr>';const done=rows.filter(r=>['OK','DONE'].includes((r[3]||'').toUpperCase())).length;$('mailStatus').className='status '+(done?'ok':'');$('mailStatus').textContent=rows.length+' mail event(s), '+done+' completed activation event(s).';};
+  async function checkOrchestrator(){try{const r=await fetch(API_BASE+'/status');const j=await r.json();$('runStatus').textContent='Orchestrator: '+j.state+(j.message?' — '+j.message.slice(-180):'');}catch(e){$('runStatus').textContent='Orchestrator unavailable. Start docker compose first.';}}
+  async function loadOutput(){const r=await fetch(API_BASE+'/output');const csv=await r.text();const rows=csv.trim().split(/\r?\n/).slice(1).filter(Boolean);$('downloadOutput').classList.toggle('hidden',!rows.length);$('downloadOutput').dataset.csv=csv;$('runStatus').textContent=rows.length+' completed and activated account(s) available.';}
+  $('runBatch').onclick=async()=>{if(!confirm('This can contact external services and create accounts. Continue?'))return;try{const r=await fetch(API_BASE+'/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({confirm:'RUN',pattern:$('pattern').value,count:Number($('count').value),start:Number($('start').value)})});const j=await r.json();$('runStatus').textContent=j.error||'Job '+j.id+' started.';const timer=setInterval(async()=>{const s=await fetch(API_BASE+'/status').then(x=>x.json());$('runStatus').textContent='Orchestrator: '+s.state;if(s.state==='completed'){clearInterval(timer);await loadOutput();}if(s.state==='failed')clearInterval(timer);},2000);}catch(e){$('runStatus').textContent='Could not start orchestrator: '+e.message;}};
+  $('downloadOutput').onclick=()=>download('kinancity-completed-accounts.csv',$('downloadOutput').dataset.csv||'');
+  checkOrchestrator();
   $('preview').onclick=sequence; $('validateCsv').onclick=validateCsv; $('clearCsv').onclick=()=>{$('csv').value='';$('csvRows').innerHTML='<tr><td colspan="4" class="small">Validation results will appear here.</td></tr>';}; $('copyCommand').onclick=async()=>{await navigator.clipboard.writeText($('command').textContent);$('metricStatus').textContent='Copied';}; sequence();
 </script>
 </body>
