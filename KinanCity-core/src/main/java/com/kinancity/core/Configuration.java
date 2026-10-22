@@ -27,6 +27,7 @@ import com.kinancity.core.captcha.CaptchaQueue;
 import com.kinancity.core.captcha.antiCaptcha.AntiCaptchaProvider;
 import com.kinancity.core.captcha.imageTypers.ImageTypersProvider;
 import com.kinancity.core.captcha.impl.LogCaptchaCollector;
+import com.kinancity.core.captcha.mock.MockCaptchaProvider;
 import com.kinancity.core.captcha.twoCaptcha.TwoCaptchaProvider;
 import com.kinancity.core.errors.ConfigurationException;
 import com.kinancity.core.generator.AccountGenerator;
@@ -60,6 +61,8 @@ public class Configuration {
 	public static final String PROVIDER_DBC = "deathbycaptcha";
 
 	public static final String PROVIDER_LOCAL = "local";
+
+	public static final String PROVIDER_MOCK = "capzy-mock";
 
 	private Logger logger = LoggerFactory.getLogger(getClass());
 
@@ -142,7 +145,7 @@ public class Configuration {
 						captchaQueue.setAddDetailedLogs(true);
 					}
 
-					if ((captchaKey == null || captchaKey.isEmpty()) && !"local".equals(captchaProvider)) {
+					if ((captchaKey == null || captchaKey.isEmpty()) && !"local".equals(captchaProvider) && !PROVIDER_MOCK.equals(captchaProvider)) {
 						throw new ConfigurationException("No Catpcha key given");
 					}
 
@@ -177,6 +180,9 @@ public class Configuration {
 							// Add local server provider
 							provider = ClientProvider.getInstance(captchaQueue);
 							providerThreadName = "localCaptchaServer";
+						} else if (PROVIDER_MOCK.equals(captchaProvider)) {
+							provider = new MockCaptchaProvider(captchaQueue);
+							providerThreadName = PROVIDER_MOCK;
 						} else if (PROVIDER_CAPSOLVER.equals(captchaProvider) ) {
 							// Add imageTypers Provider
 							provider = CapsolverCaptchaProvider.getInstance(captchaQueue, captchaKey);
