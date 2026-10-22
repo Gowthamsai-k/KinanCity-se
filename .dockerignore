@@ -1,0 +1,5 @@
+.git
+.m2
+**/target
+config.properties
+*.log

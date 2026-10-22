@@ -58,6 +58,58 @@ or
 
 You can **compile** it yourself using a **maven** goal : `mvn package`  
 
+## Local batch dashboard
+
+The repository includes a small browser-only dashboard at [`dashboard/index.html`](dashboard/index.html). It previews sequence batches, checks CSV headers, missing required fields, duplicate usernames, and basic date formatting, then produces the corresponding KinanCity command. It does not submit registrations, call CAPTCHA providers, or rotate proxies.
+
+Open it directly, or serve the repository with a local static server:
+
+```bash
+python3 -m http.server 8080 --directory dashboard
+```
+
+Then visit `http://127.0.0.1:8080`. Review the generated command, configure `config.properties` separately, and run the command manually from the repository root. Keep API keys and passwords out of the dashboard and shell history.
+
+## Docker
+
+The root `Dockerfile` builds the core CLI and creates its runtime `config.properties` inside the container. Build it with:
+
+```bash
+docker build -t kinancity-core .
+```
+
+Running without arguments only shows the CLI help:
+
+```bash
+docker run --rm kinancity-core
+```
+
+The image defaults to the local CAPTCHA provider with a dummy key. For an explicitly configured provider, pass credentials at runtime rather than baking them into the image:
+
+```bash
+docker run --rm \
+  -e CAPTCHA_PROVIDER=2captcha \
+  -e KC_CAPTCHA_VALUE="$TWOCAPTCHA_KEY" \
+  kinancity-core \
+  -m '@example.invalid' -f 'demo***' -p 'Passw0rd!' -c 5 -s 0 -t 3
+```
+
+The entrypoint adds `-npc` by default. Set `SKIP_PROXY_CHECK=false` if you intentionally configure proxies with `PROXIES`. The container does not include a CAPTCHA-solving service; `CAPTCHA_PROVIDER=local` therefore requires a separately available local provider before real processing can work.
+
+To run KinanCity-mail in its own container, build the mail image:
+
+```bash
+docker build -f Dockerfile.mail -t kinancity-mail .
+```
+
+The default is log mode on port `2525`:
+
+```bash
+docker run --rm -p 2525:2525 kinancity-mail
+```
+
+Set `MAIL_MODE=direct` to follow activation links, or leave it as `log` to record links without activating them. You can also set `MAIL_HOSTNAME`, `MAIL_ALLOWED_DOMAINS`, and `MAIL_PORT` with `-e` options. The mail image is separate from the core image and is optional if activation links are handled manually.
+
 **KinanCity** modules are java applications and all you need is a Java 8 Runtime Environment on your system.
 
 ### References

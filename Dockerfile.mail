@@ -1,0 +1,19 @@
+FROM maven:3.9.16-eclipse-temurin-21 AS build
+WORKDIR /src
+COPY . .
+RUN mvn -B -Dmaven.repo.local=/root/.m2/repository -Dmaven.compiler.proc=full \
+    -pl KinanCity-mail -am -DskipTests package
+
+FROM eclipse-temurin:21-jre
+WORKDIR /opt/kinancity-mail
+COPY --from=build /src/KinanCity-mail/target/kinancity-mail-2.1.19-SNAPSHOT.jar ./kinancity-mail.jar
+COPY docker-entrypoint-mail.sh ./docker-entrypoint-mail.sh
+RUN chmod 0755 ./docker-entrypoint-mail.sh
+
+ENV MAIL_MODE=log \
+    MAIL_PORT=2525 \
+    MAIL_HOSTNAME= \
+    MAIL_ALLOWED_DOMAINS=
+
+EXPOSE 2525
+ENTRYPOINT ["/opt/kinancity-mail/docker-entrypoint-mail.sh"]

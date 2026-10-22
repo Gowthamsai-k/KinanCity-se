@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>KinanCity batch dashboard</title>
+  <style>
+    :root { --ink:#24313b; --muted:#66737d; --line:#dfe5e8; --paper:#fff; --wash:#f5f7f8; --accent:#496b7d; --ok:#3f6d59; --bad:#9b5148; }
+    * { box-sizing:border-box; }
+    body { margin:0; color:var(--ink); background:var(--wash); font:15px/1.45 system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif; }
+    main { max-width:1120px; margin:0 auto; padding:32px 20px 56px; }
+    header { display:flex; justify-content:space-between; gap:24px; align-items:flex-end; margin-bottom:24px; }
+    h1,h2 { margin:0; font-weight:650; letter-spacing:-.02em; } h1 { font-size:28px; } h2 { font-size:18px; }
+    p { margin:6px 0 0; color:var(--muted); } .eyebrow { color:var(--accent); font-size:12px; font-weight:700; letter-spacing:.12em; text-transform:uppercase; }
+    .notice { border:1px solid #d7e0e4; background:#eef3f5; padding:12px 14px; border-radius:8px; color:#43525b; margin-bottom:18px; }
+    .grid { display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:18px; }
+    .card { background:var(--paper); border:1px solid var(--line); border-radius:10px; padding:20px; box-shadow:0 1px 2px #24313b0b; }
+    .full { grid-column:1/-1; } .card-head { display:flex; justify-content:space-between; align-items:baseline; gap:12px; margin-bottom:16px; }
+    label { display:block; color:#46545d; font-size:13px; font-weight:600; margin:12px 0 6px; }
+    input, textarea, select { width:100%; border:1px solid #cbd5da; border-radius:6px; padding:10px 11px; color:var(--ink); background:#fff; font:inherit; }
+    input:focus, textarea:focus, select:focus { outline:2px solid #bfd0d8; border-color:var(--accent); }
+    textarea { min-height:150px; resize:vertical; font:13px/1.45 ui-monospace,SFMono-Regular,Menlo,monospace; }
+    .row { display:grid; grid-template-columns:1fr 1fr; gap:12px; } .actions { display:flex; flex-wrap:wrap; gap:8px; margin-top:16px; }
+    button { border:1px solid #bdcbd1; border-radius:6px; padding:9px 13px; color:var(--ink); background:#fff; cursor:pointer; font:600 13px inherit; }
+    button.primary { color:#fff; border-color:var(--accent); background:var(--accent); } button:hover { filter:brightness(.97); }
+    .metric { display:flex; justify-content:space-between; border-bottom:1px solid var(--line); padding:9px 0; } .metric:last-child { border-bottom:0; }
+    .metric strong { font-size:18px; } .status { margin-top:12px; padding:9px 10px; border-radius:6px; background:#f1f4f5; color:var(--muted); }
+    .status.ok { color:var(--ok); background:#edf5f0; } .status.bad { color:var(--bad); background:#fbefed; }
+    table { width:100%; border-collapse:collapse; font-size:13px; } th,td { text-align:left; padding:9px 8px; border-bottom:1px solid var(--line); } th { color:var(--muted); font-weight:600; }
+    code, pre { font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace; } pre { white-space:pre-wrap; background:#f4f6f7; border:1px solid var(--line); border-radius:6px; padding:12px; overflow:auto; }
+    .small { font-size:12px; color:var(--muted); } .hidden { display:none; }
+    @media (max-width:760px) { header { display:block; } .grid { grid-template-columns:1fr; } .full { grid-column:auto; } }
+  </style>
+</head>
+<body>
+<main>
+  <header>
+    <div><div class="eyebrow">KinanCity / local dashboard</div><h1>Batch preparation</h1><p>Preview account batches, validate CSV data, and copy a CLI command.</p></div>
+    <div class="small">Local only · no network requests</div>
+  </header>
+  <div class="notice">This dashboard prepares input for KinanCity. It does not create accounts, solve CAPTCHAs, call providers, or rotate proxies.</div>
+  <section class="grid">
+    <article class="card">
+      <div class="card-head"><h2>Sequence batch</h2><span class="small">source behavior</span></div>
+      <div class="row"><div><label for="email">Base email</label><input id="email" value="@example.invalid" placeholder="@example.com"></div><div><label for="password">Password</label><input id="password" value="Passw0rd!" type="text"></div></div>
+      <div class="row"><div><label for="pattern">Username pattern</label><input id="pattern" value="demo***" placeholder="demo***"></div><div><label for="count">Count</label><input id="count" value="5" type="number" min="1" max="10000"></div></div>
+      <div class="row"><div><label for="start">Start number</label><input id="start" value="0" type="number" min="0"></div><div><label for="threads">Threads (command only)</label><input id="threads" value="3" type="number" min="1"></div></div>
+      <div class="actions"><button class="primary" id="preview">Preview batch</button><button id="copyCommand">Copy command</button></div>
+      <div id="sequenceStatus" class="status" aria-live="polite">Enter a pattern containing one or more asterisks.</div>
+    </article>
+    <article class="card">
+      <div class="card-head"><h2>Batch summary</h2><span class="small">generated locally</span></div>
+      <div class="metric"><span>Requested records</span><strong id="metricCount">0</strong></div>
+      <div class="metric"><span>Valid records</span><strong id="metricValid">0</strong></div>
+      <div class="metric"><span>Duplicate usernames</span><strong id="metricDupes">0</strong></div>
+      <div class="metric"><span>Command status</span><strong id="metricStatus">Draft</strong></div>
+      <p class="small">The generated command uses <code>-a</code> only for CSV batches and <code>-m/-f/-p/-c/-s</code> for sequence batches.</p>
+    </article>
+    <article class="card full">
+      <div class="card-head"><h2>Sequence preview</h2><span class="small" id="previewLabel">No preview yet</span></div>
+      <div style="overflow:auto"><table><thead><tr><th>#</th><th>Username</th><th>Email</th><th>Password</th></tr></thead><tbody id="previewRows"><tr><td colspan="4" class="small">Preview records will appear here.</td></tr></tbody></table></div>
+    </article>
+    <article class="card">
+      <div class="card-head"><h2>CSV validator</h2><span class="small">semicolon separated</span></div>
+      <label for="csv">Paste CSV</label><textarea id="csv" placeholder="#username;password;email;dob;country&#10;dummy001;Passw0rd!;dummy001@example.invalid;1990-01-01;GB"></textarea>
+      <div class="actions"><button class="primary" id="validateCsv">Validate CSV</button><button id="clearCsv">Clear</button></div>
+      <div id="csvStatus" class="status" aria-live="polite">Required columns: username, password, email.</div>
+    </article>
+    <article class="card">
+      <div class="card-head"><h2>CSV results</h2><span class="small" id="csvLabel">No CSV loaded</span></div>
+      <div style="overflow:auto"><table><thead><tr><th>Row</th><th>Username</th><th>Email</th><th>Checks</th></tr></thead><tbody id="csvRows"><tr><td colspan="4" class="small">Validation results will appear here.</td></tr></tbody></table></div>
+    </article>
+    <article class="card full">
+      <div class="card-head"><h2>Command to run</h2><span class="small">review before execution</span></div>
+      <pre id="command">java -jar KinanCity-core/target/kinancity-core-2.1.19-SNAPSHOT.jar -m '@example.invalid' -f 'demo***' -p 'Passw0rd!' -c 5 -s 0 -t 3</pre>
+      <p class="small">Run from the repository root after configuring <code>config.properties</code>. Keep provider keys out of this page and out of shell history.</p>
+    </article>
+  </section>
+</main>
+<script>
+  const $ = id => document.getElementById(id);
+  const esc = value => String(value).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  const shell = value => "'" + String(value).replace(/'/g, "'\\''") + "'";
+  function sequence() {
+    const email = $('email').value.trim(), password = $('password').value, pattern = $('pattern').value, count = Math.max(0, Number($('count').value)), start = Number($('start').value), threads = Math.max(1, Number($('threads').value));
+    const match = pattern.match(/^[^*]*([*]+)[^*]*$/), status = $('sequenceStatus');
+    $('metricCount').textContent = count;
+    if (!match || !Number.isInteger(start) || start < 0 || !Number.isInteger(count) || count < 1) { status.className='status bad'; status.textContent='Pattern, count, or start number is invalid.'; $('metricValid').textContent='0'; $('metricStatus').textContent='Invalid'; return; }
+    const width = match[1].length, max = Math.pow(10, width) - 1;
+    if (start + count - 1 > max) { status.className='status bad'; status.textContent='The sequence exceeds the asterisk width.'; $('metricValid').textContent='0'; $('metricStatus').textContent='Invalid'; return; }
+    const rows = []; for (let i=0; i<count; i++) { const n=String(start+i).padStart(width,'0'); const username=pattern.replace(/\*+/,n); const address=email.includes('@') ? email.replace(/^([^@]*)@/, '$1+'+username+'@') : username+email; rows.push({username,email:address,password}); }
+    $('previewRows').innerHTML=rows.slice(0,100).map((r,i)=>`<tr><td>${i+1}</td><td>${esc(r.username)}</td><td>${esc(r.email)}</td><td>${esc(r.password)}</td></tr>`).join('') || '<tr><td colspan="4">No records</td></tr>';
+    $('previewLabel').textContent=count>100 ? 'Showing first 100 of '+count : count+' record'+(count===1?'':'s'); $('metricValid').textContent=count; $('metricDupes').textContent='0'; $('metricStatus').textContent='Ready'; status.className='status ok'; status.textContent='Sequence is valid and ready for review.';
+    const cmd='java -jar KinanCity-core/target/kinancity-core-2.1.19-SNAPSHOT.jar -m '+shell(email)+' -f '+shell(pattern)+' -p '+shell(password)+' -c '+count+' -s '+start+' -t '+threads; $('command').textContent=cmd;
+  }
+  function validateCsv() {
+    const lines=$('csv').value.split(/\r?\n/).filter(line=>line.trim()), status=$('csvStatus'); if(!lines.length){status.className='status bad';status.textContent='Paste a header and at least one record.';return;}
+    const headers=lines[0].replace(/^#/,'').split(';').map(x=>x.trim()), required=['username','password','email'], missing=required.filter(x=>!headers.includes(x)); const seen=new Set(), rows=[];
+    for(let i=1;i<lines.length;i++){const fields=lines[i].split(';'), data={};headers.forEach((h,j)=>data[h]=(fields[j]||'').trim());const checks=[];required.forEach(k=>{if(!data[k])checks.push(k+' missing')});if(seen.has(data.username)&&data.username)checks.push('duplicate username');if(data.username)seen.add(data.username);if(data.dob&& !/^\d{4}-\d{2}-\d{2}$/.test(data.dob))checks.push('dob format');rows.push({i:i+1,data,checks});}
+    $('csvRows').innerHTML=rows.map(r=>`<tr><td>${r.i}</td><td>${esc(r.data.username||'')}</td><td>${esc(r.data.email||'')}</td><td class="${r.checks.length?'':''}">${esc(r.checks.length?r.checks.join(', '):'ok')}</td></tr>`).join('');$('csvLabel').textContent=rows.length+' data row'+(rows.length===1?'':'s');$('metricCount').textContent=rows.length;$('metricValid').textContent=rows.filter(r=>!r.checks.length).length;$('metricDupes').textContent=rows.filter(r=>r.checks.includes('duplicate username')).length;$('metricStatus').textContent=missing.length?'Invalid header':'Validated';
+    if(missing.length){status.className='status bad';status.textContent='Missing required columns: '+missing.join(', ')+'.';}else{const bad=rows.filter(r=>r.checks.length).length;status.className=bad?'status bad':'status ok';status.textContent=bad?bad+' row(s) need attention.':'All rows passed the local checks.';}
+    $('command').textContent='java -jar KinanCity-core/target/kinancity-core-2.1.19-SNAPSHOT.jar -a path/to/accounts.csv';
+  }
+  $('preview').onclick=sequence; $('validateCsv').onclick=validateCsv; $('clearCsv').onclick=()=>{$('csv').value='';$('csvRows').innerHTML='<tr><td colspan="4" class="small">Validation results will appear here.</td></tr>';}; $('copyCommand').onclick=async()=>{await navigator.clipboard.writeText($('command').textContent);$('metricStatus').textContent='Copied';}; sequence();
+</script>
+</body>
+</html>

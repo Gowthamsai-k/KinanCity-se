@@ -1,0 +1,4 @@
+#username;password;email;dob;country
+dummy001;Passw0rd!;dummy001@example.invalid;1990-01-01;GB
+dummy001;Passw0rd!;dummy001@example.invalid;bad-date;GB
+missing-password;;dummy003@example.invalid;1990-01-01;GB
